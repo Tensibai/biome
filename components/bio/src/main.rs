@@ -147,7 +147,7 @@ async fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
     let bio = child.join().unwrap();
 
     if let Ok(Bio::License(License::Accept)) = bio {
-        
+
         return Ok(());
     }
 

@@ -1,4 +1,4 @@
-# Habitat CHANGELOG
+Consider below original Chef Habitat Changelog
 
 <!-- latest_release 2.0.22 -->
 ## [2.0.22](https://github.com/habitat-sh/habitat/tree/2.0.22) (2025-01-11)
