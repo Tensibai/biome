@@ -104,7 +104,7 @@ use bio::cli::bio::sup::{BioSup,
 #[cfg(not(target_os = "macos"))]
 use biome_core::tls::ctl_gateway as ctl_gateway_tls;
 #[cfg(not(target_os = "macos"))]
-use webpki::DnsNameRef;
+use webpki::types::DnsName;
 
 /// Makes the --org CLI param optional when this env var is set
 const HABITAT_ORG_ENVVAR: &str = "HAB_ORG";
@@ -245,7 +245,7 @@ async fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
                                 Secret::Generate => return sub_sup_secret_generate(),
                                 Secret::GenerateTls { subject_alternative_name,
                                                       path, } => {
-                                    return sub_sup_secret_generate_key(subject_alternative_name.inner(),
+                                    return sub_sup_secret_generate_key(&subject_alternative_name.dns_name()?,
                                                                        path)
                                 }
                             }
@@ -299,10 +299,6 @@ async fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
                                   all(target_os = "windows", target_arch = "x86_64"),))]
                         Pkg::Export(export) => {
                             match export {
-                                #[cfg(target_os = "linux")]
-                                PkgExportCommand::Cf(args) => {
-                                    return command::pkg::export::cf::start(ui, &args.args).await;
-                                }
                                 #[cfg(any(target_os = "linux", target_os = "windows"))]
                                 PkgExportCommand::Container(args) => {
                                     return command::pkg::export::container::start(ui, &args.args).await;
@@ -313,10 +309,6 @@ async fn start(ui: &mut UI, feature_flags: FeatureFlag) -> Result<()> {
                                              for 'bio pkg export container'. Please update your \
                                              automation and processes accordingly.")?;
                                     return command::pkg::export::container::start(ui, &args.args).await;
-                                }
-                                #[cfg(target_os = "linux")]
-                                PkgExportCommand::Mesos(args) => {
-                                    return command::pkg::export::mesos::start(ui, &args.args).await;
                                 }
                                 #[cfg(any(target_os = "linux", target_os = "windows"))]
                                 PkgExportCommand::Tar(args) => {
@@ -809,6 +801,7 @@ async fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFl
     let plan_context = required_value_of(m, "PLAN_CONTEXT");
     let root = m.value_of("HAB_STUDIO_ROOT");
     let src = m.value_of("SRC_PATH");
+    let refresh_channel = m.value_of("REFRESH_CHANNEL");
 
     let origins = bio_key_origins(m)?;
     if !origins.is_empty() {
@@ -846,7 +839,8 @@ async fn sub_pkg_build(ui: &mut UI, m: &ArgMatches<'_>, feature_flags: FeatureFl
                                &origins,
                                native_package,
                                reuse,
-                               docker).await
+                               docker,
+                               refresh_channel).await
 }
 
 fn sub_pkg_config(m: &ArgMatches<'_>) -> Result<()> {
@@ -1021,56 +1015,27 @@ async fn sub_bldr_channel_demote(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> 
                                           &target_channel).await
 }
 
+#[allow(unused)]
 async fn sub_bldr_job_start(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let ident = required_pkg_ident_from_input(m)?;
-    let url = bldr_url_from_matches(m)?;
-    let target = target_from_matches(m)?;
-    let group = m.is_present("GROUP");
-    let token = auth_token_param_or_env(m)?;
-    command::bldr::job::start::start(ui, &url, (&ident, target), &token, group).await
+    Err(Error::BuilderBuildFunctionsRemoved)
 }
 
+#[allow(unused)]
 async fn sub_bldr_job_cancel(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let url = bldr_url_from_matches(m)?;
-    let group_id = required_value_of(m, "GROUP_ID");
-    let token = auth_token_param_or_env(m)?;
-    let force = m.is_present("FORCE");
-    command::bldr::job::cancel::start(ui, &url, group_id, &token, force).await
+    Err(Error::BuilderBuildFunctionsRemoved)
 }
 
+#[allow(unused)]
 async fn sub_bldr_job_promote_or_demote(ui: &mut UI,
                                         m: &ArgMatches<'_>,
                                         promote: bool)
                                         -> Result<()> {
-    let url = bldr_url_from_matches(m)?;
-    let group_id = required_value_of(m, "GROUP_ID");
-    let channel = required_channel_from_matches(m);
-    let origin = m.value_of("ORIGIN");
-    let interactive = m.is_present("INTERACTIVE");
-    let verbose = m.is_present("VERBOSE");
-    let token = auth_token_param_or_env(m)?;
-    command::bldr::job::promote::start(ui,
-                                       &url,
-                                       group_id,
-                                       &channel,
-                                       origin,
-                                       interactive,
-                                       verbose,
-                                       &token,
-                                       promote).await
+    Err(Error::BuilderBuildFunctionsRemoved)
 }
 
+#[allow(unused)]
 async fn sub_bldr_job_status(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
-    let url = bldr_url_from_matches(m)?;
-    let group_id = m.value_of("GROUP_ID");
-    let origin = m.value_of("ORIGIN");
-    let limit = m.value_of("LIMIT")
-                 .unwrap_or("10")
-                 .parse::<usize>()
-                 .unwrap();
-    let show_jobs = m.is_present("SHOW_JOBS");
-
-    command::bldr::job::status::start(ui, &url, group_id, origin, limit, show_jobs).await
+    Err(Error::BuilderBuildFunctionsRemoved)
 }
 
 fn sub_plan_init(ui: &mut UI, m: &ArgMatches<'_>) -> Result<()> {
@@ -1133,12 +1098,11 @@ async fn sub_pkg_install(ui: &mut UI,
             InstallMode::default()
         };
 
-    let local_package_usage =
-        if feature_flags.contains(FeatureFlag::IGNORE_LOCAL) && m.is_present("IGNORE_LOCAL") {
-            LocalPackageUsage::Ignore
-        } else {
-            LocalPackageUsage::default()
-        };
+    let local_package_usage = if m.is_present("IGNORE_LOCAL") {
+        LocalPackageUsage::Ignore
+    } else {
+        LocalPackageUsage::default()
+    };
 
     let install_hook_mode = if m.is_present("IGNORE_INSTALL_HOOK") {
         InstallHookMode::Ignore
@@ -1400,8 +1364,8 @@ async fn sub_svc_set(m: &ArgMatches<'_>) -> Result<()> {
             "NetErr" => {
                 let m = reply.parse::<sup_proto::net::NetErr>()
                              .map_err(SrvClientError::Decode)?;
-                match ErrCode::from_i32(m.code) {
-                    Some(ErrCode::InvalidPayload) => {
+                match ErrCode::try_from(m.code) {
+                    Ok(ErrCode::InvalidPayload) => {
                         ui.warn(m)?;
                     }
                     _ => return Err(SrvClientError::from(m).into()),
@@ -1584,8 +1548,8 @@ async fn sub_file_put(m: &ArgMatches<'_>) -> Result<()> {
             "NetErr" => {
                 let m = reply.parse::<sup_proto::net::NetErr>()
                              .map_err(SrvClientError::Decode)?;
-                match ErrCode::from_i32(m.code) {
-                    Some(ErrCode::InvalidPayload) => {
+                match ErrCode::try_from(m.code) {
+                    Ok(ErrCode::InvalidPayload) => {
                         ui.warn(m)?;
                     }
                     _ => return Err(SrvClientError::from(m).into()),
@@ -1662,7 +1626,7 @@ fn sub_sup_secret_generate() -> Result<()> {
 }
 
 #[cfg(not(target_os = "macos"))]
-fn sub_sup_secret_generate_key(subject_alternative_name: DnsNameRef, path: PathBuf) -> Result<()> {
+fn sub_sup_secret_generate_key(subject_alternative_name: &DnsName, path: PathBuf) -> Result<()> {
     Ok(ctl_gateway_tls::generate_self_signed_certificate_and_key(subject_alternative_name, path)
         .map_err(biome_core::Error::from)?)
 }

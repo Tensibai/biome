@@ -12,7 +12,6 @@ doc = false
 
 [dependencies]
 # Can we keep these alphabetized? We're not savages.
-atty = "*"
 base64 = "*"
 bitflags = "*"
 chrono = {version = "*", features = ["serde"]}
@@ -35,7 +34,7 @@ lazy_static = "*"
 libc = "*"
 log = "0.4"
 pbr = "*"
-rants = { git = "https://github.com/habitat-sh/rants.git", features = ["native-tls"] }
+rants = { version = "0.6.1", git = "https://github.com/habitat-sh/rants.git", features = ["native-tls"] }
 reqwest = { version = "*", features = ["blocking", "json", "stream"] }
 retry = { git = "https://github.com/habitat-sh/retry", features = ["asynchronous"] }
 rustls = "*"
@@ -53,7 +52,7 @@ tokio = { version = "*", features = ["full"] }
 toml = { version = "*", features = [ "preserve_order" ] }
 url = { version = "*", features = ["serde"] }
 walkdir = "*"
-webpki = { version = "*", features = ["alloc"] }
+rustls-webpki = { version = "*", features = ["alloc"] }
 tempfile = "*"
 
 [dependencies.uuid]

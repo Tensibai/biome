@@ -633,7 +633,8 @@ mod tests {
                             context::RenderContext,
                             package::Pkg,
                             test_helpers::*};
-    #[cfg(not(any(all(target_os = "linux", any(target_arch = "x86_64")),
+    #[cfg(not(any(all(target_os = "linux",
+                          any(target_arch = "x86_64", target_arch = "aarch64")),
                       all(target_os = "windows", target_arch = "x86_64"),)))]
     use biome_core::package::metadata::MetaFile;
     use biome_core::{package::{PackageIdent,
@@ -867,7 +868,8 @@ echo "The message is Hola Mundo"
                                                          PathBuf::from("/tmp"));
 
         // Platforms without standard package support require all packages to be native packages
-        #[cfg(not(any(all(target_os = "linux", any(target_arch = "x86_64")),
+        #[cfg(not(any(all(target_os = "linux",
+                          any(target_arch = "x86_64", target_arch = "aarch64")),
                       all(target_os = "windows", target_arch = "x86_64"))))]
         {
             tokio::fs::create_dir_all(pkg_install.installed_path()).await
@@ -894,7 +896,7 @@ echo "The message is Hola Mundo"
 
         assert!(hook.compile(&service_group, &ctx).unwrap());
 
-        let post_change_content = file_content(&hook);
+        let post_change_content = file_content(&hook).replace('\r', "");
         let expected = r#"#!/bin/bash
 
 echo "The message is Hello"
@@ -903,7 +905,7 @@ echo "The message is Hello"
 
         // Compiling again should result in no changes
         assert!(!hook.compile(&service_group, &ctx).unwrap());
-        let post_second_change_content = file_content(&hook);
+        let post_second_change_content = file_content(&hook).replace('\r', "");
         assert_eq!(post_second_change_content, post_change_content);
 
         #[cfg(unix)]

@@ -106,7 +106,7 @@ impl Cfg {
     pub fn new<P>(package: &P, config_from: Option<&PathBuf>) -> Result<Cfg>
         where P: PackageConfigPaths
     {
-        let override_config_dir = config_from.map(Clone::clone);
+        let override_config_dir = config_from.cloned();
         let default = {
             let pkg_root = match override_config_dir {
                 Some(ref path) => Cow::Borrowed(path),
@@ -614,7 +614,8 @@ mod test {
                                   PackageInstall}},
                 templating::{context::RenderContext,
                              test_helpers::*}};
-    #[cfg(not(any(all(target_os = "linux", any(target_arch = "x86_64")),
+    #[cfg(not(any(all(target_os = "linux",
+                          any(target_arch = "x86_64", target_arch = "aarch64")),
                       all(target_os = "windows", target_arch = "x86_64"),)))]
     use hcore::package::metadata::MetaFile;
     use std::{env,
@@ -1094,9 +1095,9 @@ mod test {
         fs::create_dir_all(&dir_a).expect("create dir_a");
         fs::create_dir_all(&dir_c).expect("create dir_b and dir_c");
 
-        create_with_content(&dir_a.join("foo.txt"), "Hello world!");
-        create_with_content(&dir_b.join("bar.txt"), "Hello world!");
-        create_with_content(&dir_c.join("baz.txt"), "Hello world!");
+        create_with_content(dir_a.join("foo.txt"), "Hello world!");
+        create_with_content(dir_b.join("bar.txt"), "Hello world!");
+        create_with_content(dir_c.join("baz.txt"), "Hello world!");
 
         let renderer = load_templates(&input_dir, &PathBuf::new(), TemplateRenderer::new())
             .expect("visit config dirs");
@@ -1151,7 +1152,8 @@ mod test {
                             "config message is {{cfg.message}}");
 
         // Platforms without standard package support require all packages to be native packages
-        #[cfg(not(any(all(target_os = "linux", any(target_arch = "x86_64")),
+        #[cfg(not(any(all(target_os = "linux",
+                          any(target_arch = "x86_64", target_arch = "aarch64")),
                       all(target_os = "windows", target_arch = "x86_64"))))]
         {
             create_with_content(pkg_dir.join(MetaFile::PackageType.to_string()), "native");
