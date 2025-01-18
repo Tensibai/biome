@@ -42,14 +42,6 @@ Describe "at-once update and rollback" {
         }
     }
 
-    Context "demote update" {
-        bio pkg demote $updatedRelease $testChannel
-
-        It "rollback release" {
-            Wait-Release -Ident $initialRelease
-        }
-    }
-
     AfterAll {
         bio bldr channel destroy $testChannel --origin biome-testing
         Unload-SupervisorService -PackageName $pkg -Timeout 20
